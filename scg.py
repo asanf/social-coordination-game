@@ -17,9 +17,8 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    
-    
+
+    @package Social Coordination Game    
     Social Coordination Game
     
     This code implements social coordination games with discreet preferences, 
@@ -64,7 +63,7 @@ def sum(addends, start=0):
     '''
         Numerically stable function that computes the sum of a collection of values.
         Implements Kahan algorithm.
-        @param addeds list of value to sum
+        @param addends list of value to sum
         @param start initial value
     '''
     s = start
@@ -516,20 +515,49 @@ class Game:
         for p in self.players():
             self.graph.node[p]['centrality'] = centrality[p]
         del centrality
-    
-    def eigenCentrality(self, p):
-        return self.graph.node[p]['centrality']
+        
+    '''
+        The following are some priority-reletad methods     
+    '''
 
     def checkForTie(self, priorityFunction):
+        '''
+            Method which check if a give priority function yields ties
+        '''
+        # compute the values of the priority function for each player
         values = [priorityFunction(p) for p in self.players()]
-        tie = True in [values.count(i) != 1 for i in values]
+        
+        # check if the number of occurence of each value is greater than one
+        # at least once
+        tie = True in [values.count(i) > 1 for i in values]
         return tie
+    
+    def eigenCentrality(self, p):
+        '''
+        Method which return the pagerank / eigen centrality
+        as a priority score
+        @param p a player index
+        @return the priority of p
+        '''
+        return self.graph.node[p]['centrality']
 
     def priorityEgo(self, p):
+        '''
+        Computes the priority of a player as the ratio between the egoistic 
+        payoff of the preferred strategy and the total coordination payoff
+        @param p a player index
+        @return the priority of p
+        '''
         coord = sum([self.gamma(p,j) * self.w(p,j) for j in self.graph.neighbors(p)])
         return self.belief(p)[self.best(p)] / coord
 
     def priorityLocalEgo(self, p):
+        '''
+        Computes the priority of a player as the ratio between the egoistic and 
+        coordination payoffs of the currently played strategy
+        @param p a player index
+        @return the priority of p
+        '''
         coord = sum([self.gamma(p,j) * self.w(p,j) for j in self.graph.neighbors(p) if self.s(p) == self.s(j)])
         try:
             toRet = self.belief(p)[self.s(p)] / (coord)
@@ -538,37 +566,71 @@ class Game:
         return toRet
 
     def priorityCoordGain(self, p):
+        '''
+        Computes the priority of the player based on the coordination payoff
+        @param p a player index
+        @return the priority of p
+        '''
         coord = sum([self.gamma(p,j) * self.w(p,j) for j in self.graph.neighbors(p) if self.s(p) == self.s(j)])
         return 1/(1+coord)
 
     def priorityWeightedEgo(self, p):
+        '''
+        Same as priorityEgo but weighted by the player's degree
+        @param p a player index
+        @return the priority of p
+        '''
         return self.graph.degree(p) * self.priorityEgo(p)
 
     def priorityWeightedLocalEgo(self, p):
+        '''
+        Same as localEgo but weighted by the player's degree
+        @param p a player index
+        @return the priority of psave
+        '''
         return self.graph.degree(p) * self.priorityLocalEgo(p)
 
     def priorityDelta(self, p):
+        '''
+        Prioritize the player according to the number of neighbours
+        @param p a player index
+        @return the priority of p
+        '''
         return self.graph.degree(p)
 
     def priorityDeltaEgo(self, p):
+        '''
+        Same as priorityEgo, but weighted by the inverse degree
+        @param p a player index
+        @return the priority of p
+        '''
         coord = sum([self.gamma(p,j) * self.w(p,j) for j in self.graph.neighbors(p)])
-        return self.belief(p)[self.best(p)] / (self.graph.degree(p) + coord)
+        return self.belief(p)[self.best(p)] / (self.graph.degree(p) * coord)
 
     def priorityDeltaLocalEgo(self, p):
+        '''
+        Same as priorityLocalEgo, but weighted by the inverse degree
+        @param p a player index
+        @return the priority of p
+        '''
         coord = sum([self.gamma(p,j) * self.w(p,j) for j in self.graph.neighbors(p) if self.s(p) == self.s(j)])
-        return self.belief(p)[self.s(p)] / (self.graph.degree(p) + coord)
+        return self.belief(p)[self.s(p)] / (self.graph.degree(p) * coord)
 
     def priorityInfluence(self, p):
+        '''
+        Return the priority value computed by computeInfluence
+        @param p a player index
+        @return the priority of p
+        '''
         return self.graph.node[p]['influence']
 
-    def priorityPoor(self, p):
-        try:
-            toRet = 1/self.u(p, self.s(p))
-        except ZeroDivisionError:
-            toRet = float("Inf")
-        return toRet
-
+    
     def priorityBestBR(self, p):
+        '''
+        Prioritize the player according to their best response
+        @param p a player index
+        @return the priority of p
+        '''
         maxPayoff = 0
         for s in range(self.numStrategies):
             payoff = self.u(p, s)
@@ -577,15 +639,36 @@ class Game:
         return maxPayoff
 
     def priorityBestAsocialBR(self, p):
+        '''
+        Prioritize the player who have high best response and few neighbours
+        @param p a player index
+        @return the priority of p
+        '''
         return self.priorityBestBR(p) / self.graph.degree(p)
 
     def priorityBestBRG(self, p):
+        '''
+        Prioritize the player according to the gain obtained by performing a 
+        best response
+        @param p a player index
+        @return the priority of p
+        '''
         return (self.priorityBestBR(p) - self.u(p, self.s(p)))
 
     def priorityBestAsocialBRG(self, p):
+        '''
+        Prioritize players who have high gain and few neighbours
+        @param p a player index
+        @return the priority of p
+        '''
         return self.priorityBestBRG(p) / self.graph.degree(p)
 
     def priorityBestSWC(self, p):
+        '''
+        Prioritize the player according to their contribution to social welfare
+        @param p a player index
+        @return the priority of p
+        '''
         maxCont = 0
         for s in range(self.numStrategies):
             swc = self.swc(p,s)
@@ -594,19 +677,44 @@ class Game:
         return maxCont
 
     def priorityBestAsocialSWC(self, p):
+        '''
+        Prioritize players with high social welfare contribution and low degree
+        @param p a player index
+        @return the priority of p
+        '''
         return self.priorityBestSWC(p) / self.graph.degree(p)
 
     def priorityBestSWCG(self, p):
+        '''
+        Prioritize the player according to the gain in social welfare they
+        produce by performing a best response
+        @param p a player index
+        @return the priority of p
+        '''
         return (self.priorityBestSWC(p) - self.swc(p, self.s(p)))
 
     def priorityBestAsocialSWCG(self, p):
+        '''
+        Same as priorityBestSWCG, but prioritize players with low degree
+        @param p a player index
+        @return the priority of p
+        '''
         return self.priorityBestSWCG(p) / self.graph.degree(p)
 
     def priorityCenralSWC(self, p):
+        '''
+        Prioritize players according to their social welfare contribution 
+        weighted by their pagerank/eigencentrality value
+        @param p a player index
+        @return the priority of p
+        '''
         return (self.priorityBestSWC(p) * self.eigenCentrality(p))
     
 
     def egoism(self):
+        '''
+        Return satistics about the best egoistic/total coordination payoff ratio
+        '''
         egoList = [self.priorityEgo(p) for p in self.players()]
 
         toReturn = stats(egoList, "Ego")
@@ -614,6 +722,10 @@ class Game:
         return toReturn
 
     def localEgoism(self):
+        '''
+        Return statistics about the egoistic/coordination ratio
+        of the currently played strategy
+        '''
         egoList = [self.priorityLocalEgo(p) for p in self.players()]
 
         toReturn = stats(egoList, "localEgo")
@@ -621,16 +733,26 @@ class Game:
         return toReturn
 
     def degree(self):
+        '''
+        Return statistics about the node degrees
+        '''
         deg = self.graph.degree().values()
         toReturn = stats(deg, "Deg")
         del deg
         return toReturn
 
     def completeness(self):
+        '''
+        @returns a number in [0,1] which indicates "how much" the graph is
+        a complete graph
+        '''
         n = self.numPlayers
         return (2*self.graph.number_of_edges())/(n*(n-1))
 
     def gammaStats(self):
+        '''
+        Return statistics about the importance players give to coordination
+        '''
         g = lambda p: self.graph.node[p]['gamma']
 
         gammas = [self.gamma(i,j)/self.gamma(j,i) for i,j in self.graph.edges()]
@@ -734,15 +856,17 @@ class Game:
         # get the social welfare of the current solution
         alphaSw = self.socialWelfare()
 
-        # compute the alpha value for the next oneshot invocation
-        beta = 1 / (alpha-1)
-
-        # find a solution with 1/(alpha-1)
-        self.oneShotAlphaBR(beta, k0, priority, reverse)
-
-        # get the social welfare of the current solution
-        betaSw = self.socialWelfare()
-        
+        if alpha > 1:
+            # compute the alpha value for the next oneshot invocation
+            beta = 1 / (alpha-1)
+    
+            # find a solution with 1/(alpha-1)
+            self.oneShotAlphaBR(beta, k0, priority, reverse)
+    
+            # get the social welfare of the current solution
+            betaSw = self.socialWelfare()
+        else:
+            betaSw = -1
         # put the best solution's alpha and social welfare  in a dictionary and 
         # return the results.
         result = dict()
@@ -788,7 +912,6 @@ def test(number):
     weightedEgo = game.priorityWeightedEgo, \
     weightedLocalEgo = game.priorityWeightedLocalEgo, \
     coordGain = game.priorityCoordGain,\
-    poor = game.priorityPoor,\
     bestBR = game.priorityBestBR,\
     bestBRG = game.priorityBestBRG,\
     bestABR = game.priorityBestAsocialBR,\
@@ -818,9 +941,9 @@ def test(number):
     initSw = game.socialWelfare()
     
     # computes the golden ratio
-    phi = (1 + 5**.5)/2
+    #saveCphi = (1 + 5**.5)/2
 
-    alpha = rnd.uniform(phi, 2)
+    alpha = 1 #rnd.uniform(phi, 2)
 
     # get the alpha value and the social welfare of the original algorithm
     origResult = game.findEquilibria(alpha)
@@ -860,11 +983,11 @@ def test(number):
     results['bestGain'] = results[best+'Gain']
 
     # add some statistics to the result dictionary
-    results.update(game.egoism())
-    results.update(game.localEgoism())
-    results.update(game.degree())
-    results.update(game.gammaStats())
-    results["complete"] = game.completeness()
+#    results.update(game.egoism())
+#    results.update(game.localEgoism())
+#    results.update(game.degree())
+#    results.update(game.gammaStats())
+#    results["complete"] = game.completeness()
 
     with countLock:
         counter.value += 1
@@ -875,26 +998,41 @@ def test(number):
 
 
 
-def run(numExperiments, function=test, completeness = None):
+def run(numExperiments, function=test):
+    '''
+    Function which execute a number of test in parallel
+    @param numExperiment how many execution must be done
+    @param function which function must be excecuted
+    @returns a list of dictionaries of length numExperiments
+    '''
+    
+    # create a multiprocessing pool, the number of processors is automatically
+    # retrieved. maxtaskperchild puts a limit on the memory used
+    pool = mp.Pool(maxtasksperchild=2500)
 
-    pool = mp.Pool(processes=4, maxtasksperchild=2500)
-
+    # results is a list of results given by each function run.
     results = pool.map_async(function, range(numExperiments))
 
     startTime = time.time()
 
+    # until the results are ready
     while not results.ready():
-
+        # comput how much time has passed since the start of the test
         elapsed = time.time() - startTime
         hours = int(elapsed / 3600)
         minutes = int(elapsed /60)%60
         seconds = int(elapsed % 60)
         time.sleep(.5)
-
-        done = "\rProgresso: {0:3.2f} % \tIn esecuzione da: {1:02d}:{2:02d}:{3:02d}".format((counter.value/numExperiments)*100, hours, minutes, seconds)
+        
+        # print progress
+        done = "\rProgress: {0:3.2f} % \tRunning since: {1:02d}:{2:02d}:{3:02d}".format((counter.value/numExperiments)*100, hours, minutes, seconds)
         sys.stderr.write(done)
+    
+    # clear and close the pool
     pool.close()
     pool.join()
     print "\n"
+    
+    # returns the results in output
     output = results.get()
     return output
