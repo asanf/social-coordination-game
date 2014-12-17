@@ -941,9 +941,9 @@ def test(number):
     initSw = game.socialWelfare()
     
     # computes the golden ratio
-    #saveCphi = (1 + 5**.5)/2
+    phi = (1 + 5**.5)/2
 
-    alpha = 1 #rnd.uniform(phi, 2)
+    alpha = rnd.uniform(phi, 2)
 
     # get the alpha value and the social welfare of the original algorithm
     origResult = game.findEquilibria(alpha)
@@ -983,11 +983,11 @@ def test(number):
     results['bestGain'] = results[best+'Gain']
 
     # add some statistics to the result dictionary
-#    results.update(game.egoism())
-#    results.update(game.localEgoism())
-#    results.update(game.degree())
-#    results.update(game.gammaStats())
-#    results["complete"] = game.completeness()
+    results.update(game.egoism())
+    results.update(game.localEgoism())
+    results.update(game.degree())
+    results.update(game.gammaStats())
+    results["complete"] = game.completeness()
 
     with countLock:
         counter.value += 1
